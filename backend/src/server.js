@@ -1,19 +1,28 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// ── Middleware ────────────────────────────────────────────────────────────────
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+// ── CORS ──────────────────────────────────────────────────────────────────────
+const setCors = (res, origin) => {
+  res.header('Access-Control-Allow-Origin', origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+};
+
+app.use((req, res, next) => {
+  setCors(res, req.headers.origin);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
   next();
 });
+
+app.options('*', (req, res) => {
+  setCors(res, req.headers.origin);
+  res.status(204).send('');
+});
+
 app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────────
