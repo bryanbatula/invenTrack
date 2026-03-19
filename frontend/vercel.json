@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://inventrck-6u1e.onrender.com/api/:path*"
+      "destination": "https://inventrack-6u1e.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
