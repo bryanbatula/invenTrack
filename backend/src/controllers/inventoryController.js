@@ -169,6 +169,21 @@ const adjustStock = async (req, res, next) => {
   }
 };
 
+// ── Soft delete item ──────────────────────────────────────────────────────────
+const deleteItem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rowCount } = await db.query(
+      'UPDATE items SET is_active = FALSE WHERE id = $1 AND is_active = TRUE',
+      [id]
+    );
+    if (rowCount === 0) return res.status(404).json({ message: 'Item not found' });
+    res.json({ message: 'Item deactivated successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Get categories ────────────────────────────────────────────────────────────
 const getCategories = async (req, res, next) => {
   try {
@@ -179,4 +194,4 @@ const getCategories = async (req, res, next) => {
   }
 };
 
-module.exports = { getItems, getItemById, createItem, updateItem, adjustStock, getCategories };
+module.exports = { getItems, getItemById, createItem, updateItem, adjustStock, getCategories, deleteItem };

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/axios';
 import {
-  Search, Plus, Download, Filter, AlertTriangle,
-  Package, ChevronRight, X, SlidersHorizontal,
+  Search, Plus, Download, AlertTriangle,
+  Package, ChevronRight, X, SlidersHorizontal, Trash2,
 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import Pagination from '../components/ui/Pagination';
@@ -132,6 +132,7 @@ export default function Inventory() {
   const [editItem, setEditItem] = useState(null);
   const [adjustItem, setAdjustItem] = useState(null);
   const [detailItem, setDetailItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
 
   const { data: catData } = useQuery({
     queryKey: ['categories'],
@@ -162,6 +163,12 @@ export default function Inventory() {
     mutationFn: ({ id, ...body }) => api.put(`/api/inventory/${id}`, body),
     onSuccess: () => { qc.invalidateQueries(['inventory']); toast.success('Item updated'); setEditItem(null); },
     onError: (e) => toast.error(e.response?.data?.message || 'Error updating item'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/api/inventory/${id}`),
+    onSuccess: () => { qc.invalidateQueries(['inventory']); toast.success('Item deactivated'); setDeleteItem(null); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Error deleting item'),
   });
 
   const adjustMutation = useMutation({
@@ -298,6 +305,13 @@ export default function Inventory() {
                             className="p-1.5 rounded hover:bg-emerald-50 text-gray-400 hover:text-emerald-600"
                             title="Adjust stock"
                           ><Package size={14} /></button>
+                          {user?.role === 'admin' && (
+                            <button
+                              onClick={() => setDeleteItem(item)}
+                              className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600"
+                              title="Deactivate item"
+                            ><Trash2 size={14} /></button>
+                          )}
                         </>
                       )}
                     </div>
@@ -336,6 +350,31 @@ export default function Inventory() {
             onSave={(f) => adjustMutation.mutate({ id: adjustItem.id, ...f })}
           />
         )}
+      </Modal>
+
+      <Modal open={!!deleteItem} onClose={() => setDeleteItem(null)} title="Deactivate Item" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg">
+            <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-800">This action cannot be undone.</p>
+              <p className="text-sm text-red-600 mt-1">
+                Deactivate <strong>{deleteItem?.item_code}</strong> — {deleteItem?.description}?
+                The item and its stock movement history will be preserved for BIR audit purposes.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button className="btn-secondary" onClick={() => setDeleteItem(null)}>Cancel</button>
+            <button
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              onClick={() => deleteMutation.mutate(deleteItem.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deactivating…' : 'Yes, Deactivate'}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={!!detailItem} onClose={() => setDetailItem(null)} title={`FIFO Lots — ${detailItem?.item_code}`} size="lg">
