@@ -84,7 +84,7 @@ function PRForm({ items: inventoryItems, onClose, onSave }) {
   );
 }
 
-function PRDetail({ pr, onApprove, canApprove }) {
+function PRDetail({ pr, onApprove, canApprove, onCancel, canCancel }) {
   const [action, setAction] = useState(null);
   const [note, setNote] = useState('');
 
@@ -123,6 +123,18 @@ function PRDetail({ pr, onApprove, canApprove }) {
           ))}
         </tbody>
       </table>
+
+      {canCancel && (
+        <div className="border-t pt-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Cancel PR
+          </button>
+          <p className="text-xs text-gray-400 mt-1">Only pending PRs can be cancelled.</p>
+        </div>
+      )}
 
       {canApprove && pr.status === 'pending' && (
         <div className="border-t pt-4 space-y-3">
@@ -198,6 +210,12 @@ export default function PurchaseRequests() {
     onError: (e) => toast.error(e.response?.data?.message || 'Error'),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id) => api.patch(`/api/procurement/purchase-requests/${id}/cancel`),
+    onSuccess: () => { qc.invalidateQueries(['prs']); toast.success('PR cancelled'); setViewPR(null); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Cannot cancel this PR'),
+  });
+
   const canApprove = ['admin', 'manager'].includes(user?.role);
 
   const filtered = data?.data?.filter(pr =>
@@ -236,7 +254,7 @@ export default function PurchaseRequests() {
         </div>
         <select className="input w-40" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
           <option value="">All Status</option>
-          {['pending', 'approved', 'rejected', 'converted'].map(s => <option key={s}>{s}</option>)}
+          {['pending', 'approved', 'rejected', 'converted', 'cancelled'].map(s => <option key={s}>{s}</option>)}
         </select>
       </div>
 
@@ -283,6 +301,8 @@ export default function PurchaseRequests() {
           pr={prDetail}
           canApprove={canApprove}
           onApprove={(action, note) => approveMutation.mutate({ id: viewPR.id, action, rejection_note: note })}
+          onCancel={() => cancelMutation.mutate(viewPR.id)}
+          canCancel={prDetail?.status === 'pending'}
         />
       </Modal>
     </div>

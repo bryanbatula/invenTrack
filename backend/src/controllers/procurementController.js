@@ -116,6 +116,21 @@ const approvePR = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ── Cancel PR (pending only) ──────────────────────────────────────────────────
+const cancelPR = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await db.query(
+      `UPDATE purchase_requests SET status = 'cancelled'
+       WHERE id = $1 AND status = 'pending'
+       RETURNING *`,
+      [id]
+    );
+    if (!rows.length) return res.status(400).json({ message: 'PR not found or cannot be cancelled (only pending PRs can be cancelled)' });
+    res.json({ message: 'PR cancelled', pr: rows[0] });
+  } catch (err) { next(err); }
+};
+
 // ══════════════════════════════════════════════════════════════
 //  PURCHASE ORDERS
 // ══════════════════════════════════════════════════════════════
@@ -227,6 +242,21 @@ const createPO = async (req, res, next) => {
   } finally {
     client.release();
   }
+};
+
+// ── Cancel PO (pending only, admin only) ─────────────────────────────────────
+const cancelPO = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await db.query(
+      `UPDATE purchase_orders SET status = 'cancelled'
+       WHERE id = $1 AND status = 'pending'
+       RETURNING *`,
+      [id]
+    );
+    if (!rows.length) return res.status(400).json({ message: 'PO not found or cannot be cancelled (only pending POs can be cancelled)' });
+    res.json({ message: 'PO cancelled', po: rows[0] });
+  } catch (err) { next(err); }
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -376,7 +406,7 @@ const createAndPostRR = async (req, res, next) => {
 };
 
 module.exports = {
-  getPRs, getPRById, createPR, approvePR,
-  getPOs, getPOById, createPO,
+  getPRs, getPRById, createPR, approvePR, cancelPR,
+  getPOs, getPOById, createPO, cancelPO,
   getRRs, getRRById, createAndPostRR,
 };

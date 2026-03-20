@@ -115,7 +115,7 @@ function POForm({ suppliers, items: invItems, approvedPRs, onClose, onSave }) {
   );
 }
 
-function PODetail({ po }) {
+function PODetail({ po, canCancel, onCancel }) {
   if (!po) return null;
   return (
     <div className="space-y-4">
@@ -156,6 +156,18 @@ function PODetail({ po }) {
         <div className="flex justify-between"><span className="text-gray-500">VAT:</span><span>{peso(po.vat_amount)}</span></div>
         <div className="flex justify-between font-bold border-t pt-2"><span>Total:</span><span>{peso(po.total_amount)}</span></div>
       </div>
+
+      {canCancel && (
+        <div className="border-t pt-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Cancel PO
+          </button>
+          <p className="text-xs text-gray-400 mt-1">Only pending POs can be cancelled. Admin only.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -194,6 +206,12 @@ export default function PurchaseOrders() {
     mutationFn: (body) => api.post('/api/procurement/purchase-orders', body),
     onSuccess: () => { qc.invalidateQueries(['pos']); toast.success('PO created'); setShowCreate(false); },
     onError: (e) => toast.error(e.response?.data?.message || 'Error creating PO'),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id) => api.patch(`/api/procurement/purchase-orders/${id}/cancel`),
+    onSuccess: () => { qc.invalidateQueries(['pos']); toast.success('PO cancelled'); setViewPO(null); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Cannot cancel this PO'),
   });
 
   const canCreate = ['admin', 'manager'].includes(user?.role);
@@ -265,7 +283,11 @@ export default function PurchaseOrders() {
       </Modal>
 
       <Modal open={!!viewPO} onClose={() => setViewPO(null)} title={`PO Details — ${viewPO?.po_number}`} size="lg">
-        <PODetail po={poDetail} />
+        <PODetail
+          po={poDetail}
+          canCancel={user?.role === 'admin' && poDetail?.status === 'pending'}
+          onCancel={() => cancelMutation.mutate(viewPO.id)}
+        />
       </Modal>
     </div>
   );
